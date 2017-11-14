@@ -90,3 +90,5 @@ test <- predict(prepcd, pml_testing)
 predict(fit, test)
 ```
 
+## Conclusion
+We built a model using knn algorithm. We didn't have to use any cross-validation here, also no resampling thus we can't say anything about the out of sample error. But the accuracy of >0.95 (on the validation set) is quite respectable and it seems to be not overfitting either as it performs quite well on both the validation and the test sets.
