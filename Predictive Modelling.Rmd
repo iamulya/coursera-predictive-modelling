@@ -1,0 +1,92 @@
+---
+title: "Prediction Assignment"
+author: Amulya Bhatia
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(dplyr)
+library(caret)
+library(data.table)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Synopsis
+In this project, our goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants and develop a predictive model which tries to quantify how well the participants are doing the exercise. The five possibilities are:
+
+1. Exactly according to the specification (Class A). 
+2. throwing the elbows to the front (Class B). 
+3. Lifting the dumbbell only halfway (Class C). 
+4. Lowering the dumbbell only halfway (Class D).
+5. Throwing the hips to the front (Class E) 
+
+The data for the project comes from [here](http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har).
+
+## Loading the data
+We load both training and the test data here.
+```{r}
+#Download the training and test file
+if(!file.exists("pml-training.csv"))
+   download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", 
+                destfile="pml-training.csv")
+
+if(!file.exists("pml-testing.csv"))
+    download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", 
+                  destfile="pml-testing.csv")
+
+#load the data tables
+pml_training <- read.csv("pml-training.csv", stringsAsFactors=FALSE)
+pml_testing <- read.csv("pml-testing.csv", stringsAsFactors=FALSE)
+```
+
+## Data Preprocessing
+Let's look at the dimensions of the data first:
+```{r}
+dim(pml_training)
+```
+
+Next we set our response variable as a factor, and remove features that don't provide any information gain. All the variables with statistics like variance, std. deviation will be removed since they dont provide any information gain.
+```{r}
+pml_training$classe <- factor(pml_training$classe)
+pml_training <- pml_training %>% select(-contains("var_"), -contains("stddev_"),
+                        -contains("min_"), -contains("max_"),
+                        -contains("avg_"), -contains("kurtosis_"),
+                        -contains("skewness_"), -contains("amplitude_"), -user_name, -raw_timestamp_part_1, -raw_timestamp_part_2, -cvtd_timestamp, -new_window, -num_window)
+pml_training <- pml_training[,-1]
+```
+
+Now we create our data partition, with a training and a validation set. We'll keep 75% of the randomized data in the training set and the rest in the validation set.
+```{r}
+inTrain <- createDataPartition(y=pml_training$classe, p=0.75, list=FALSE)
+training <- pml_training[inTrain,]
+validation <- pml_training[-inTrain,]
+responseColIndex <- length(training)
+```
+
+For further preprocessing, we will rescale the data, impute the missing data using knn and apply Principal Component Analysis ([PCA](https://en.wikipedia.org/wiki/Principal_component_analysis)) to create new features with 90% of the cumulative percent of variance. We'll then use the PCA'd features to generate the model.
+```{r}
+prepcd <- preProcess(training[,-responseColIndex],method=c("center", "scale", "knnImpute", "pca"), thresh=0.9)
+pcd_data <- predict(prepcd,training[,-responseColIndex])
+```
+
+## Model Generation
+Since the data contains a lot of (x,y,z) type features, it would make sense to try out the k-nn algorithm. K-nn requires the data to be properly scaled and we have already done that. We'd use the default settings, i.e. euclidean distance as the distance metric.
+```{r}
+fit <- train(y=training$classe,x=pcd_data, method="knn")
+```
+
+Now that we have a model, let's check its performance on our validation data.
+```{r}
+validation_data <- predict(prepcd, validation[,-responseColIndex])
+confusionMatrix(validation$classe, predict(fit,validation_data))
+```
+
+At last, we'll predict the values for the test data.
+```{r}
+pml_testing <- pml_testing[,names(pml_testing) %in% names(pml_training)]
+
+test <- predict(prepcd, pml_testing)
+predict(fit, test)
+```
+
