@@ -9,6 +9,8 @@ library(ggplot2)
 library(dplyr)
 library(caret)
 library(data.table)
+library(parallel)
+library(doParallel)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -82,13 +84,28 @@ validation_data <- predict(prepcd, validation[,-responseColIndex])
 confusionMatrix(validation$classe, predict(fit,validation_data))
 ```
 
+This model gives us accuracy upwards of 95%. Let's try another model, this time using random forest and without rescaling of the data and the PCA'd features. We'll start with 4-crossfolds and see what the accuracy is like. 
+```{r}
+registerDoParallel(makeCluster(4))
+set.seed(5515)
+rf_fit <- train(classe ~ .,
+             data=training,
+             method="rf",
+             trControl=trainControl(method="cv",
+                     number=4,
+                     allowParallel=TRUE))
+confusionMatrix(validation$classe, predict(rf_fit,validation))
+```
+
+
 At last, we'll predict the values for the test data.
 ```{r}
 pml_testing <- pml_testing[,names(pml_testing) %in% names(pml_training)]
 
-test <- predict(prepcd, pml_testing)
-predict(fit, test)
+predict(rf_fit, pml_testing)
 ```
 
 ## Conclusion
-We built a model using knn algorithm. We didn't have to use any cross-validation here, also no resampling thus we can't say anything about the out of sample error. But the accuracy of >0.95 (on the validation set) is quite respectable and it seems to be not overfitting either as it performs quite well on both the validation and the test sets.
+We first built a model using knn algorithm. We didn't have to use any cross-validation there, also no resampling thus we can't say anything about the out of sample error. But the accuracy of >0.95 (on the validation set) is quite respectable and it seems to be not overfitting either as it performs quite well on both the validation and the test sets.
+
+However we then further try to improve the accuracy and create a model with random forest. Here we used 4-fold cross-validation as a start and it worked out pretty well. We achieve an accuracy upwards of 99% on the validation data, which is *really* good. It performs equally well on the test data with the 20 rows. Thus we can proclaim that the out of sample error will not be very high. 

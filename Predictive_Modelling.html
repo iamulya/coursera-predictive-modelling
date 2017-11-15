@@ -182,44 +182,96 @@ confusionMatrix(validation$classe, predict(fit,validation_data))</code></pre>
 ## 
 ##           Reference
 ## Prediction    A    B    C    D    E
-##          A 1372   11   12    0    0
-##          B   28  889   23    6    3
-##          C    4   21  808   21    1
-##          D    4    0   34  761    5
-##          E    6    5    8    7  875
+##          A 1381    4    6    3    1
+##          B   32  865   44    7    1
+##          C    8   14  812   21    0
+##          D    2    0   38  762    2
+##          E    1    6   13   12  869
 ## 
 ## Overall Statistics
-##                                           
-##                Accuracy : 0.9594          
-##                  95% CI : (0.9535, 0.9648)
-##     No Information Rate : 0.2883          
-##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
-##                                           
-##                   Kappa : 0.9487          
-##  Mcnemar's Test P-Value : 6.004e-05       
+##                                         
+##                Accuracy : 0.9562        
+##                  95% CI : (0.95, 0.9617)
+##     No Information Rate : 0.2904        
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16     
+##                                         
+##                   Kappa : 0.9445        
+##  Mcnemar's Test P-Value : 9.766e-12     
 ## 
 ## Statistics by Class:
 ## 
 ##                      Class: A Class: B Class: C Class: D Class: E
-## Sensitivity            0.9703   0.9600   0.9130   0.9572   0.9898
-## Specificity            0.9934   0.9849   0.9883   0.9895   0.9935
-## Pos Pred Value         0.9835   0.9368   0.9450   0.9465   0.9711
-## Neg Pred Value         0.9880   0.9906   0.9810   0.9917   0.9978
-## Prevalence             0.2883   0.1888   0.1805   0.1621   0.1803
-## Detection Rate         0.2798   0.1813   0.1648   0.1552   0.1784
+## Sensitivity            0.9698   0.9730   0.8894   0.9466   0.9954
+## Specificity            0.9960   0.9791   0.9892   0.9898   0.9921
+## Pos Pred Value         0.9900   0.9115   0.9497   0.9478   0.9645
+## Neg Pred Value         0.9877   0.9939   0.9751   0.9895   0.9990
+## Prevalence             0.2904   0.1813   0.1862   0.1642   0.1780
+## Detection Rate         0.2816   0.1764   0.1656   0.1554   0.1772
 ## Detection Prevalence   0.2845   0.1935   0.1743   0.1639   0.1837
-## Balanced Accuracy      0.9819   0.9725   0.9506   0.9734   0.9917</code></pre>
+## Balanced Accuracy      0.9829   0.9760   0.9393   0.9682   0.9937</code></pre>
+<p>This model gives us accuracy upwards of 95%. Let’s try another model, this time using random forest and without rescaling of the data and the PCA’d features. We’ll start with 4-crossfolds and see what the accuracy is like.</p>
+<pre class="r"><code>registerDoParallel(makeCluster(4))
+set.seed(5515)
+rf_fit &lt;- train(classe ~ .,
+             data=training,
+             method=&quot;rf&quot;,
+             trControl=trainControl(method=&quot;cv&quot;,
+                     number=4,
+                     allowParallel=TRUE))</code></pre>
+<pre><code>## Loading required package: randomForest</code></pre>
+<pre><code>## randomForest 4.6-12</code></pre>
+<pre><code>## Type rfNews() to see new features/changes/bug fixes.</code></pre>
+<pre><code>## 
+## Attaching package: 'randomForest'</code></pre>
+<pre><code>## The following object is masked from 'package:dplyr':
+## 
+##     combine</code></pre>
+<pre><code>## The following object is masked from 'package:ggplot2':
+## 
+##     margin</code></pre>
+<pre class="r"><code>confusionMatrix(validation$classe, predict(rf_fit,validation))</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction    A    B    C    D    E
+##          A 1395    0    0    0    0
+##          B    6  941    2    0    0
+##          C    0    5  850    0    0
+##          D    0    0   16  788    0
+##          E    0    0    0    1  900
+## 
+## Overall Statistics
+##                                           
+##                Accuracy : 0.9939          
+##                  95% CI : (0.9913, 0.9959)
+##     No Information Rate : 0.2857          
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
+##                                           
+##                   Kappa : 0.9923          
+##  Mcnemar's Test P-Value : NA              
+## 
+## Statistics by Class:
+## 
+##                      Class: A Class: B Class: C Class: D Class: E
+## Sensitivity            0.9957   0.9947   0.9793   0.9987   1.0000
+## Specificity            1.0000   0.9980   0.9988   0.9961   0.9998
+## Pos Pred Value         1.0000   0.9916   0.9942   0.9801   0.9989
+## Neg Pred Value         0.9983   0.9987   0.9956   0.9998   1.0000
+## Prevalence             0.2857   0.1929   0.1770   0.1609   0.1835
+## Detection Rate         0.2845   0.1919   0.1733   0.1607   0.1835
+## Detection Prevalence   0.2845   0.1935   0.1743   0.1639   0.1837
+## Balanced Accuracy      0.9979   0.9963   0.9890   0.9974   0.9999</code></pre>
 <p>At last, we’ll predict the values for the test data.</p>
 <pre class="r"><code>pml_testing &lt;- pml_testing[,names(pml_testing) %in% names(pml_training)]
 
-test &lt;- predict(prepcd, pml_testing)
-predict(fit, test)</code></pre>
-<pre><code>##  [1] B A A A A E D B A A B C B A E E A B B B
+predict(rf_fit, pml_testing)</code></pre>
+<pre><code>##  [1] B A B A A E D B A A B C B A E E A B B B
 ## Levels: A B C D E</code></pre>
 </div>
 <div id="conclusion" class="section level2">
 <h2>Conclusion</h2>
-<p>We built a model using knn algorithm. We didn’t have to use any cross-validation here, also no resampling thus we can’t say anything about the out of sample error. But the accuracy of &gt;0.95 (on the validation set) is quite respectable and it seems to be not overfitting either as it performs quite well on both the validation and the test sets.</p>
+<p>We first built a model using knn algorithm. We didn’t have to use any cross-validation there, also no resampling thus we can’t say anything about the out of sample error. But the accuracy of &gt;0.95 (on the validation set) is quite respectable and it seems to be not overfitting either as it performs quite well on both the validation and the test sets.</p>
+<p>However we then further try to improve the accuracy and create a model with random forest. Here we used 4-fold cross-validation as a start and it worked out pretty well. We achieve an accuracy upwards of 99% on the validation data, which is <em>really</em> good. It performs equally well on the test data with the 20 rows. Thus we can proclaim that the out of sample error will not be very high.</p>
 </div>
 
 
